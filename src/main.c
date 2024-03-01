@@ -19,9 +19,9 @@ void init(SDL_Window **, SDL_Renderer **, camera_t *, double);
 void window_test(SDL_Renderer *);
 double get_discriminant_sphere(ray_t *, sphere_t *);
 double get_intersection_distance_sphere(ray_t *r, vec3_t, double);
-color_t render_pixel(int, int, camera_t *, sphere_t *);
+color_t render_pixel(int, int, camera_t *, sphere_t [], int);
 void update_intersection_info(intersection_t *, ray_t *, sphere_t *, double);
-void render_screen(SDL_Renderer *, camera_t *, sphere_t *);
+void render_screen(SDL_Renderer *, camera_t *, sphere_t [], int);
 uint32_t millis();
 
 int main(void) {
@@ -33,32 +33,44 @@ int main(void) {
     // Initialize
     init(&window, &renderer, &camera, 75);
     
-    sphere_t sphere;
-    vec3_set(&sphere.pos, 0, 5, 0);
-    sphere.radius = 1;
-    color_t color = {0, 0, 255};
-    material_t material = {color};
-    sphere.material = &material;
+
+    // Create scene
+    int spheres_count = 3;
+    sphere_t spheres[spheres_count];
+
+    vec3_set(&spheres[0].pos, -3, 5, 0);
+    vec3_set(&spheres[1].pos, 0, 5, 0);
+    vec3_set(&spheres[2].pos, 3, 5, 0);
+    spheres[0].radius = 1;
+    spheres[1].radius = 1;
+    spheres[2].radius = 1;
+    material_t material_r = {color_init(255,0,0)};
+    material_t material_g = {color_init(0,255,0)};
+    material_t material_b = {color_init(0,0,255)};
+    spheres[0].material = &material_r;
+    spheres[1].material = &material_g;
+    spheres[2].material = &material_b;
 
 
     // Main loop
     uint32_t last_frame = millis();
     while (1) {
-        if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
-            break;
+        if (SDL_PollEvent(&event) && event.type == SDL_QUIT) break;
         
-
-        
+        render_screen(renderer, &camera, spheres, spheres_count);
+        SDL_RenderPresent(renderer);
         if (camera_update_pos(&camera) + camera_ipdate_angle(&camera, &event)) {
             // Simple render
-            render_screen(renderer, &camera, &sphere);
-            SDL_RenderPresent(renderer);
+            // render_screen(renderer, &camera, &sphere);
+            // SDL_RenderPresent(renderer);
         }
         else {
             // Path Tracing
         }
+
+
         uint32_t now_ms = millis();
-        printf("last frame: %dms\n", now_ms - last_frame);
+        printf("LastFrame: %dms\n", now_ms - last_frame);
         last_frame = now_ms;
     }
     SDL_DestroyRenderer(renderer);
@@ -68,10 +80,10 @@ int main(void) {
 }
 
 
-void render_screen(SDL_Renderer *renderer, camera_t *camera, sphere_t *sphere) {
+void render_screen(SDL_Renderer *renderer, camera_t *camera, sphere_t spheres[], int spheres_count) {
     for (int y = 0; y < camera->res_y; y++) {
         for (int x = 0; x < camera->res_x; x++) {
-            color_t color = render_pixel(x, y, camera, sphere);
+            color_t color = render_pixel(x, y, camera, spheres, spheres_count);
             SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
             SDL_RenderDrawPoint(renderer, x, y);
         }
@@ -79,23 +91,27 @@ void render_screen(SDL_Renderer *renderer, camera_t *camera, sphere_t *sphere) {
 }
 
 
-color_t render_pixel(int x, int y, camera_t *camera, sphere_t *sphere) {
+color_t render_pixel(int x, int y, camera_t *camera, sphere_t spheres[], int spheres_count) {
     ray_t ray;
-    camera_set_ray_for_pixel(camera, &ray, x, y);
-
-    double discriminant = get_discriminant_sphere(&ray, sphere);
-    if (discriminant < 0) {
-        return color_init(0,0,0);
-    }
-
+    color_t color = color_init(0,0,0);
     intersection_t info = {false};
-    update_intersection_info(&info, &ray, sphere, discriminant);
-    double brightness = -vec3_dot(ray.dir, info.normal);
+    camera_set_ray_for_pixel(camera, &ray, x, y);
+    for (int i = 0; i < spheres_count; i++) {
+        double discriminant = get_discriminant_sphere(&ray, &spheres[i]);
+        if (discriminant >= 0) {
+            double d = get_intersection_distance_sphere(&ray, spheres[i].pos, discriminant);
+            if (!info.valid || d < info.dis) {
+                update_intersection_info(&info, &ray, &spheres[i], discriminant);
+                double brightness = -vec3_dot(ray.dir, info.normal);
 
-    uint8_t r = sphere->material->color.r * brightness;
-    uint8_t g = sphere->material->color.g * brightness;
-    uint8_t b = sphere->material->color.b * brightness;
-    return color_init(r, g, b);
+                uint8_t r = spheres[i].material->color.r * brightness;
+                uint8_t g = spheres[i].material->color.g * brightness;
+                uint8_t b = spheres[i].material->color.b * brightness;
+                color_set(&color, r,g,b);
+            }
+        }
+    }
+    return color;
 }
 
 
