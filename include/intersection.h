@@ -1,17 +1,19 @@
-#ifndef sphere_H
-#define sphere_H
+#ifndef intersection_H
+#define intersection_H
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "vec3.h"
 #include "material.h"
 
 
 typedef struct {
+    bool valid;
+    double dis;
     vec3_t pos;
-    double radius;
+    vec3_t normal;
     material_t *material;
-
-} sphere_t;
+} intersection_t;
 
 
 #endif

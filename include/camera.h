@@ -8,9 +8,9 @@ typedef struct {
     int res_x;
     int res_y;
     double fow;
-    vec3_t position;
-    vec3_t direction;
-    vec3_t angle;
+    vec3_t pos;
+    vec3_t dir;
+    vec3_t ang;
 } camera_t;
 
 void camera_set_ray_for_pixel(camera_t *cam, ray_t *ray, int x, int y);

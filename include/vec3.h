@@ -7,10 +7,12 @@ typedef struct {
 } vec3_t;
 
 
+void vec3_info(vec3_t vec);
 void vec3_set (vec3_t *vec, double x, double y, double z);
 vec3_t vec3_add (vec3_t vec1, vec3_t vec2);
 vec3_t vec3_subtract (vec3_t vec1, vec3_t vec2);
 vec3_t vec3_multiply (vec3_t vec1, vec3_t vec2);
+vec3_t vec3_scale (vec3_t vec, double val);
 vec3_t vec3_negate (vec3_t vec);
 double vec3_length (vec3_t vec);
 vec3_t vec3_normalize(vec3_t vec);

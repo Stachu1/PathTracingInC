@@ -3,6 +3,10 @@
 #include <math.h>
 #include "vec3.h"
 
+void vec3_info(vec3_t vec) {
+    printf("x: %f, y: %f, z: %f\n", vec.x, vec.y, vec.z);
+}
+
 void vec3_set(vec3_t *vec, double x, double y, double z) {
     if (vec != NULL) {
         vec->x = x;
@@ -30,6 +34,13 @@ vec3_t vec3_multiply(vec3_t vec1, vec3_t vec2) {
     vec1.y *= vec2.y;
     vec1.z *= vec2.z;
     return vec1;
+}
+
+vec3_t vec3_scale (vec3_t vec, double val) {
+    vec.x *= val;
+    vec.y *= val;
+    vec.z *= val;
+    return vec;
 }
 
 vec3_t vec3_negate(vec3_t vec) {

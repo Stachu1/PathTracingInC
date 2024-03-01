@@ -4,21 +4,21 @@
 #include "vec3.h"
 
 
-void ray_set_origin(ray_t *ray, vec3_t *origin) {
+void ray_set_origin(ray_t *ray, vec3_t *ori) {
     if (ray != NULL) {
-        ray->origin = *origin;
+        ray->ori = *ori;
     }
 }
 
-void ray_set_direction(ray_t* ray, vec3_t *direction) {
+void ray_set_direction(ray_t* ray, vec3_t *dir) {
     if (ray != NULL) {
-        ray->direction = *direction;
+        ray->dir = *dir;
     }
 }
 
 void ray_info(ray_t *ray) {
     if (ray != NULL) {
-        printf("Origin: (%.2f, %.2f, %.2f)\n", ray->origin.x, ray->origin.y, ray->origin.z);
-        printf("Direction: (%.2f, %.2f, %.2f)\n", ray->direction.x, ray->direction.y, ray->direction.z);
+        printf("Origin: (%.2f, %.2f, %.2f)\n", ray->ori.x, ray->ori.y, ray->ori.z);
+        printf("Direction: (%.2f, %.2f, %.2f)\n", ray->dir.x, ray->dir.y, ray->dir.z);
     }
 }
