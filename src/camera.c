@@ -23,6 +23,7 @@ void camera_set_ray_for_pixel(camera_t *camera, ray_t *ray, int x, int y) {
 int camera_update_pos(camera_t *camera) {
     const uint8_t* keys = SDL_GetKeyboardState(NULL);
     double delta_az = M_PI_2*keys[4] + M_PI*keys[22] - M_PI_2*keys[7];
+    
     if (keys[4] + keys[26] + keys[22] + keys[7]) {
         camera->vel = vec3_rotate(vec3_init(0,1,0), camera->angle.x, camera->angle.y, camera->angle.z + delta_az);
         camera->vel = vec3_scale(camera->vel, MOVEMENT_SPEED);
@@ -31,6 +32,7 @@ int camera_update_pos(camera_t *camera) {
     }
     return false;
 }
+
 
 int camera_ipdate_angle(camera_t *camera, SDL_Event *event) {
     static int start_x;
@@ -45,10 +47,6 @@ int camera_ipdate_angle(camera_t *camera, SDL_Event *event) {
     }
     if (event->type == SDL_MOUSEBUTTONUP && mouse_down) {
         mouse_down = false;
-        printf("x: %d y: %d\n", d_x, d_y);
-        camera->angle.x -= d_y * camera->pixel_angle_y;
-        camera->angle.z -= d_x * camera->pixel_angle_x;
-        return 1;  
     }
 
     if (event->type == SDL_MOUSEMOTION) {
@@ -61,8 +59,12 @@ int camera_ipdate_angle(camera_t *camera, SDL_Event *event) {
         if (mouse_down) {
             d_x = start_x - event->motion.x;
             d_y = start_y - event->motion.y;
+            camera->angle.x -= d_y * camera->pixel_angle_y;
+            camera->angle.z -= d_x * camera->pixel_angle_x;
+            start_x = event->motion.x;
+            start_y = event->motion.y;
+            return 1;  
         }
-        
     }
     return 0;
 }
