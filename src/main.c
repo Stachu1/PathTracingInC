@@ -10,8 +10,8 @@
 #include "intersection.h"
 #include "material.h"
 
-#define WINDOW_WIDTH 300
-#define WINDOW_HEIGHT 300
+#define WINDOW_WIDTH 600
+#define WINDOW_HEIGHT 600
 
 
 
@@ -22,6 +22,7 @@ double get_intersection_distance_sphere(ray_t *r, vec3_t, double);
 color_t render_pixel(int, int, camera_t *, sphere_t *);
 void update_intersection_info(intersection_t *, ray_t *, sphere_t *, double);
 void render_screen(SDL_Renderer *, camera_t *, sphere_t *);
+uint32_t millis();
 
 int main(void) {
     SDL_Event event;
@@ -31,7 +32,7 @@ int main(void) {
     
     // Initialize
     init(&window, &renderer, &camera, 75);
-
+    
     sphere_t sphere;
     vec3_set(&sphere.pos, 0, 5, 0);
     sphere.radius = 1;
@@ -41,13 +42,14 @@ int main(void) {
 
 
     // Main loop
+    uint32_t last_frame = millis();
     while (1) {
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
             break;
         
 
         
-        if (camera_update_pos(&camera) || camera_ipdate_angle(&camera, &event)) {
+        if (camera_update_pos(&camera) + camera_ipdate_angle(&camera, &event)) {
             // Simple render
             render_screen(renderer, &camera, &sphere);
             SDL_RenderPresent(renderer);
@@ -55,6 +57,9 @@ int main(void) {
         else {
             // Path Tracing
         }
+        uint32_t now_ms = millis();
+        printf("last frame: %dms\n", now_ms - last_frame);
+        last_frame = now_ms;
     }
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -149,4 +154,10 @@ void window_test(SDL_Renderer *rend) {
         }
     }
     SDL_RenderPresent(rend);
+}
+
+uint32_t millis() {
+  struct timespec t ;
+  clock_gettime ( CLOCK_MONOTONIC_RAW , & t ) ;
+  return t.tv_sec * 1000 + ( t.tv_nsec + 500000 ) / 1000000 ;
 }
