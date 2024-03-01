@@ -10,17 +10,18 @@
 #include "intersection.h"
 #include "material.h"
 
-#define WINDOW_WIDTH 600
-#define WINDOW_HEIGHT 600
+#define WINDOW_WIDTH 300
+#define WINDOW_HEIGHT 300
 
 
 
-void init(SDL_Window **, SDL_Renderer **, camera_t *);
+void init(SDL_Window **, SDL_Renderer **, camera_t *, double);
 void window_test(SDL_Renderer *);
 double get_discriminant_sphere(ray_t *, sphere_t *);
 double get_intersection_distance_sphere(ray_t *r, vec3_t, double);
 color_t render_pixel(int, int, camera_t *, sphere_t *);
 void update_intersection_info(intersection_t *, ray_t *, sphere_t *, double);
+void render_screen(SDL_Renderer *, camera_t *, sphere_t *);
 
 int main(void) {
     SDL_Event event;
@@ -29,39 +30,47 @@ int main(void) {
     camera_t camera;
     
     // Initialize
-    init(&window, &renderer, &camera);
+    init(&window, &renderer, &camera, 75);
 
     sphere_t sphere;
     vec3_set(&sphere.pos, 0, 5, 0);
     sphere.radius = 1;
-    color_t white = {255, 255, 255};
-    material_t material_white = {white};
-    sphere.material = &material_white;
+    color_t color = {0, 0, 255};
+    material_t material = {color};
+    sphere.material = &material;
 
-
-    color_t color;
-    for (int y = 0; y < camera.res_y; y++) {
-        for (int x = 0; x < camera.res_x; x++) {
-            color = render_pixel(x, y, &camera, &sphere);
-            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
-            SDL_RenderDrawPoint(renderer, x, y);
-        }
-    }
-    SDL_RenderPresent(renderer);
 
     // Main loop
     while (1) {
-
-        
-
-
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT)
             break;
+        
+
+        
+        if (camera_update_pos(&camera, &event)) {
+            // Simple render
+            render_screen(renderer, &camera, &sphere);
+            SDL_RenderPresent(renderer);
+        }
+        else {
+            // Path Tracing
+        }
     }
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
     return EXIT_SUCCESS;
+}
+
+
+void render_screen(SDL_Renderer *renderer, camera_t *camera, sphere_t *sphere) {
+    for (int y = 0; y < camera->res_y; y++) {
+        for (int x = 0; x < camera->res_x; x++) {
+            color_t color = render_pixel(x, y, camera, sphere);
+            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+            SDL_RenderDrawPoint(renderer, x, y);
+        }
+    }
 }
 
 
@@ -78,7 +87,10 @@ color_t render_pixel(int x, int y, camera_t *camera, sphere_t *sphere) {
     update_intersection_info(&info, &ray, sphere, discriminant);
     double brightness = -vec3_dot(ray.dir, info.normal);
 
-    return color_init(255*brightness, 255*brightness, 255*brightness);
+    uint8_t r = sphere->material->color.r * brightness;
+    uint8_t g = sphere->material->color.g * brightness;
+    uint8_t b = sphere->material->color.b * brightness;
+    return color_init(r, g, b);
 }
 
 
@@ -111,17 +123,16 @@ double get_discriminant_sphere(ray_t *ray, sphere_t *sphere) {
 }
 
 
-void init(SDL_Window **win, SDL_Renderer **rend, camera_t *camera) {
+void init(SDL_Window **win, SDL_Renderer **rend, camera_t *camera, double fow) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, win, rend);
-    SDL_SetWindowTitle(*win, "ELO PathTracing");
-
+    SDL_SetWindowTitle(*win, "PathTracing");
     camera->res_x = WINDOW_WIDTH;
     camera->res_y = WINDOW_HEIGHT;
-    camera->fow = 45.*M_PI/180.;
+    camera->fow = fow * M_PI/180.;
     vec3_set(&camera->pos, 0,0,0);
-    vec3_set(&camera->dir, 0,1,0);
-    vec3_set(&camera->ang, 0,0,0);
+    vec3_set(&camera->vel, 0,0,0);
+    vec3_set(&camera->angle, 0,0,0);
 }
 
 

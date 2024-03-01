@@ -8,7 +8,9 @@ typedef struct {
 
 
 void vec3_info(vec3_t vec);
+vec3_t vec3_init(double x, double y, double z);
 void vec3_set (vec3_t *vec, double x, double y, double z);
+int vec3_is_zero(vec3_t vec);
 vec3_t vec3_add (vec3_t vec1, vec3_t vec2);
 vec3_t vec3_subtract (vec3_t vec1, vec3_t vec2);
 vec3_t vec3_multiply (vec3_t vec1, vec3_t vec2);

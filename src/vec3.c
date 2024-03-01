@@ -7,12 +7,21 @@ void vec3_info(vec3_t vec) {
     printf("x: %f, y: %f, z: %f\n", vec.x, vec.y, vec.z);
 }
 
+vec3_t vec3_init(double x, double y, double z) {
+    vec3_t vec = {x, y, z};
+    return vec;
+}
+
 void vec3_set(vec3_t *vec, double x, double y, double z) {
     if (vec != NULL) {
         vec->x = x;
         vec->y = y;
         vec->z = z;
     }
+}
+
+int vec3_is_zero(vec3_t vec) {
+    return !vec.x & !vec.y & !vec.z;
 }
 
 vec3_t vec3_add(vec3_t vec1, vec3_t vec2) {
