@@ -47,7 +47,7 @@ int main(void) {
         
 
         
-        if (camera_update_pos(&camera, &event)) {
+        if (camera_update_pos(&camera) || camera_ipdate_angle(&camera, &event)) {
             // Simple render
             render_screen(renderer, &camera, &sphere);
             SDL_RenderPresent(renderer);
@@ -127,12 +127,15 @@ void init(SDL_Window **win, SDL_Renderer **rend, camera_t *camera, double fow) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, win, rend);
     SDL_SetWindowTitle(*win, "PathTracing");
+
     camera->res_x = WINDOW_WIDTH;
     camera->res_y = WINDOW_HEIGHT;
     camera->fow = fow * M_PI/180.;
     vec3_set(&camera->pos, 0,0,0);
     vec3_set(&camera->vel, 0,0,0);
     vec3_set(&camera->angle, 0,0,0);
+    camera->pixel_angle_x = camera->fow / (camera->res_x - 1);
+    camera->pixel_angle_y = camera->pixel_angle_x * (double)camera->res_y/camera->res_x;
 }
 
 

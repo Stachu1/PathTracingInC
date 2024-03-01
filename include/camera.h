@@ -12,10 +12,13 @@ typedef struct {
     vec3_t pos;
     vec3_t vel;
     vec3_t angle;
+    double pixel_angle_x;
+    double pixel_angle_y;
     
 } camera_t;
 
 void camera_set_ray_for_pixel(camera_t *cam, ray_t *ray, int x, int y);
-int camera_update_pos(camera_t *camera, SDL_Event *event);
+int camera_update_pos(camera_t *camera);
+int camera_ipdate_angle(camera_t *camera, SDL_Event *event);
 
 #endif
