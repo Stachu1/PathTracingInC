@@ -22,10 +22,19 @@ void camera_set_ray_for_pixel(camera_t *camera, ray_t *ray, int x, int y) {
 
 int camera_update_pos(camera_t *camera) {
     const uint8_t* keys = SDL_GetKeyboardState(NULL);
-    double delta_az = M_PI_2*keys[4] + M_PI*keys[22] - M_PI_2*keys[7];
-    
-    if (keys[4] + keys[26] + keys[22] + keys[7]) {
-        camera->vel = vec3_rotate(vec3_init(0,1,0), camera->angle.x, camera->angle.y, camera->angle.z + delta_az);
+    double delta_az = M_PI_2*keys[4] - M_PI_2*keys[7];
+
+    // AWSD keys indexes: 4 26 22 7
+
+    if (keys[26] | keys[22]) {
+        camera->vel = vec3_rotate(vec3_init(0,1,0), camera->angle.x, camera->angle.y, camera->angle.z);
+        if (keys[22]) camera->vel = vec3_negate(camera->vel);
+        camera->vel = vec3_scale(camera->vel, MOVEMENT_SPEED);
+        camera->pos = vec3_add(camera->pos, camera->vel);
+        return true;
+    }
+    if ((keys[4] | keys[7]) & ~(keys[4] & keys[7])) {
+        camera->vel = vec3_rotate(vec3_init(0,1,0), 0, 0, camera->angle.z + delta_az);
         camera->vel = vec3_scale(camera->vel, MOVEMENT_SPEED);
         camera->pos = vec3_add(camera->pos, camera->vel);
         return true;

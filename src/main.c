@@ -9,19 +9,20 @@
 #include "color.h"
 #include "intersection.h"
 #include "material.h"
+#include "skybox.h"
 
-#define WINDOW_WIDTH 600
-#define WINDOW_HEIGHT 600
+#define WINDOW_WIDTH 300
+#define WINDOW_HEIGHT 300
 
 
 
-void init(SDL_Window **, SDL_Renderer **, camera_t *, double);
+void init(SDL_Window **, SDL_Renderer **, camera_t *, double, skybox_t *);
 void window_test(SDL_Renderer *);
 double get_discriminant_sphere(ray_t *, sphere_t *);
-double get_intersection_distance_sphere(ray_t *r, vec3_t, double);
-color_t render_pixel(int, int, camera_t *, sphere_t [], int);
+double get_intersection_distance_sphere(ray_t *, vec3_t, double);
+color_t render_pixel(int, int, camera_t *, skybox_t *, sphere_t[], int);
 void update_intersection_info(intersection_t *, ray_t *, sphere_t *, double);
-void render_screen(SDL_Renderer *, camera_t *, sphere_t [], int);
+void render_screen(SDL_Renderer *, camera_t *, skybox_t *, sphere_t[], int);
 uint32_t millis();
 
 int main(void) {
@@ -29,9 +30,10 @@ int main(void) {
     SDL_Window *window;
     SDL_Renderer *renderer;
     camera_t camera;
+    skybox_t skybox;
     
     // Initialize
-    init(&window, &renderer, &camera, 75);
+    init(&window, &renderer, &camera, 75, &skybox);
     
 
     // Create scene
@@ -52,12 +54,15 @@ int main(void) {
     spheres[2].material = &material_b;
 
 
+
+
     // Main loop
+    printf("\n");
     uint32_t last_frame = millis();
     while (1) {
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT) break;
         
-        render_screen(renderer, &camera, spheres, spheres_count);
+        render_screen(renderer, &camera, &skybox, spheres, spheres_count);
         SDL_RenderPresent(renderer);
         if (camera_update_pos(&camera) + camera_ipdate_angle(&camera, &event)) {
             // Simple render
@@ -70,7 +75,8 @@ int main(void) {
 
 
         uint32_t now_ms = millis();
-        printf("LastFrame: %dms\n", now_ms - last_frame);
+        printf("\rLastFrame: %dms ", now_ms - last_frame);
+        fflush(stdout);
         last_frame = now_ms;
     }
     SDL_DestroyRenderer(renderer);
@@ -80,10 +86,10 @@ int main(void) {
 }
 
 
-void render_screen(SDL_Renderer *renderer, camera_t *camera, sphere_t spheres[], int spheres_count) {
+void render_screen(SDL_Renderer *renderer, camera_t *camera, skybox_t *skybox, sphere_t spheres[], int spheres_count) {
     for (int y = 0; y < camera->res_y; y++) {
         for (int x = 0; x < camera->res_x; x++) {
-            color_t color = render_pixel(x, y, camera, spheres, spheres_count);
+            color_t color = render_pixel(x, y, camera, skybox, spheres, spheres_count);
             SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
             SDL_RenderDrawPoint(renderer, x, y);
         }
@@ -91,7 +97,7 @@ void render_screen(SDL_Renderer *renderer, camera_t *camera, sphere_t spheres[],
 }
 
 
-color_t render_pixel(int x, int y, camera_t *camera, sphere_t spheres[], int spheres_count) {
+color_t render_pixel(int x, int y, camera_t *camera, skybox_t *skybox, sphere_t spheres[], int spheres_count) {
     ray_t ray;
     color_t color = color_init(0,0,0);
     intersection_t info = {false};
@@ -100,7 +106,7 @@ color_t render_pixel(int x, int y, camera_t *camera, sphere_t spheres[], int sph
         double discriminant = get_discriminant_sphere(&ray, &spheres[i]);
         if (discriminant >= 0) {
             double d = get_intersection_distance_sphere(&ray, spheres[i].pos, discriminant);
-            if (!info.valid || d < info.dis) {
+            if (d > 0 && (!info.valid || d < info.dis)) {
                 update_intersection_info(&info, &ray, &spheres[i], discriminant);
                 double brightness = -vec3_dot(ray.dir, info.normal);
 
@@ -110,6 +116,9 @@ color_t render_pixel(int x, int y, camera_t *camera, sphere_t spheres[], int sph
                 color_set(&color, r,g,b);
             }
         }
+    }
+    if (!info.valid) {
+        color = skybox_get_vec3_color(skybox, ray.dir);
     }
     return color;
 }
@@ -144,7 +153,7 @@ double get_discriminant_sphere(ray_t *ray, sphere_t *sphere) {
 }
 
 
-void init(SDL_Window **win, SDL_Renderer **rend, camera_t *camera, double fow) {
+void init(SDL_Window **win, SDL_Renderer **rend, camera_t *camera, double fow, skybox_t *skybox) {
     SDL_Init(SDL_INIT_VIDEO);
     SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, win, rend);
     SDL_SetWindowTitle(*win, "PathTracing");
@@ -157,6 +166,8 @@ void init(SDL_Window **win, SDL_Renderer **rend, camera_t *camera, double fow) {
     vec3_set(&camera->angle, 0,0,0);
     camera->pixel_angle_x = camera->fow / (camera->res_x - 1);
     camera->pixel_angle_y = camera->pixel_angle_x * (double)camera->res_y/camera->res_x;
+
+    skybox_init(skybox, "skybox/skybox.bmp", 3072, 1536);
 }
 
 
