@@ -6,13 +6,15 @@
 #include "ray.h"
 #include "camera.h"
 #include "sphere.h"
-#include "color.h"
 #include "intersection.h"
 #include "material.h"
 #include "skybox.h"
 
-#define WINDOW_WIDTH 300
-#define WINDOW_HEIGHT 300
+#define WINDOW_WIDTH 600
+#define WINDOW_HEIGHT 600
+
+#define RES_DIVISOR_IN_PERFOMANCE 4
+#define MAX_REFLECTIONS 1
 
 
 
@@ -20,9 +22,12 @@ void init(SDL_Window **, SDL_Renderer **, camera_t *, double, skybox_t *);
 void window_test(SDL_Renderer *);
 double get_discriminant_sphere(ray_t *, sphere_t *);
 double get_intersection_distance_sphere(ray_t *, vec3_t, double);
-color_t render_pixel(int, int, camera_t *, skybox_t *, sphere_t[], int);
+vec3_t render_pixel(int, int, camera_t *, skybox_t *, sphere_t[], int, int);
+void reflect_ray(ray_t *, intersection_t *);
+vec3_t get_diffused_reflection(vec3_t);
+vec3_t get_specular_reflection(vec3_t, vec3_t);
 void update_intersection_info(intersection_t *, ray_t *, sphere_t *, double);
-void render_screen(SDL_Renderer *, camera_t *, skybox_t *, sphere_t[], int);
+void render_screen(SDL_Renderer *, camera_t *, vec3_t [], bool, skybox_t *, sphere_t[], int);
 uint32_t millis();
 
 int main(void) {
@@ -32,8 +37,10 @@ int main(void) {
     camera_t camera;
     skybox_t skybox;
     
+    
     // Initialize
     init(&window, &renderer, &camera, 75, &skybox);
+    vec3_t pixels[WINDOW_WIDTH * WINDOW_HEIGHT];
     
 
     // Create scene
@@ -46,9 +53,9 @@ int main(void) {
     spheres[0].radius = 1;
     spheres[1].radius = 1;
     spheres[2].radius = 1;
-    material_t material_r = {color_init(255,0,0)};
-    material_t material_g = {color_init(0,255,0)};
-    material_t material_b = {color_init(0,0,255)};
+    material_t material_r = {vec3_init(1,0,0)};
+    material_t material_g = {vec3_init(0,1,0)};
+    material_t material_b = {vec3_init(0,0,1)};
     spheres[0].material = &material_r;
     spheres[1].material = &material_g;
     spheres[2].material = &material_b;
@@ -59,19 +66,21 @@ int main(void) {
     // Main loop
     printf("\n");
     uint32_t last_frame = millis();
+    uint32_t last_moved = 0;
     while (1) {
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT) break;
         
-        render_screen(renderer, &camera, &skybox, spheres, spheres_count);
-        SDL_RenderPresent(renderer);
-        if (camera_update_pos(&camera) + camera_ipdate_angle(&camera, &event)) {
-            // Simple render
-            // render_screen(renderer, &camera, &sphere);
-            // SDL_RenderPresent(renderer);
+        bool cam_moved = camera_update_pos(&camera) | camera_ipdate_angle(&camera, &event);
+        if (cam_moved) last_moved = last_frame;
+        if (millis() - last_moved < 500) {
+            // Performance mode
+            render_screen(renderer, &camera, pixels, true, &skybox, spheres, spheres_count);
         }
         else {
             // Path Tracing
+            render_screen(renderer, &camera, pixels, false, &skybox,  spheres, spheres_count);
         }
+        SDL_RenderPresent(renderer);
 
 
         uint32_t now_ms = millis();
@@ -86,41 +95,82 @@ int main(void) {
 }
 
 
-void render_screen(SDL_Renderer *renderer, camera_t *camera, skybox_t *skybox, sphere_t spheres[], int spheres_count) {
+void render_screen(SDL_Renderer *renderer, camera_t *camera, vec3_t pixels[], bool perfomance_mode, skybox_t *skybox, sphere_t spheres[], int spheres_count) {
+    int res_divisor = perfomance_mode ? RES_DIVISOR_IN_PERFOMANCE : 1;
+    int max_reflections = perfomance_mode ? 0 : MAX_REFLECTIONS;
+    for (int y = 0; y < camera->res_y; y+=res_divisor) {
+        for (int x = 0; x < camera->res_x; x+=res_divisor) {
+
+            vec3_t color = render_pixel(x, y, camera, skybox, spheres, spheres_count, max_reflections);
+            
+            
+            if (perfomance_mode) {
+                for (int dy = 0; dy < res_divisor; dy++) {
+                    for (int dx = 0; dx < res_divisor; dx++) {
+                        // SDL_RenderDrawPoint(renderer, x+sx, y+sy);
+                        pixels[(x+dx) + (y+dy) * WINDOW_WIDTH] = color;
+                    }
+                }
+            }
+            else {
+                // SDL_RenderDrawPoint(renderer, x, y);
+                pixels[x + y * WINDOW_WIDTH] = color;
+            }
+        }
+    }
     for (int y = 0; y < camera->res_y; y++) {
         for (int x = 0; x < camera->res_x; x++) {
-            color_t color = render_pixel(x, y, camera, skybox, spheres, spheres_count);
-            SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+            vec3_t color = pixels[x + y * WINDOW_WIDTH];
+            SDL_SetRenderDrawColor(renderer, (uint8_t)255.*color.x, (uint8_t)255.*color.y, (uint8_t)255.*color.z, 255);
             SDL_RenderDrawPoint(renderer, x, y);
         }
     }
 }
 
 
-color_t render_pixel(int x, int y, camera_t *camera, skybox_t *skybox, sphere_t spheres[], int spheres_count) {
+vec3_t render_pixel(int x, int y, camera_t *camera, skybox_t *skybox, sphere_t spheres[], int spheres_count, int max_reflections) {
     ray_t ray;
-    color_t color = color_init(0,0,0);
-    intersection_t info = {false};
+    vec3_t color = vec3_init(1.,1.,1.);
     camera_set_ray_for_pixel(camera, &ray, x, y);
-    for (int i = 0; i < spheres_count; i++) {
-        double discriminant = get_discriminant_sphere(&ray, &spheres[i]);
-        if (discriminant >= 0) {
-            double d = get_intersection_distance_sphere(&ray, spheres[i].pos, discriminant);
-            if (d > 0 && (!info.valid || d < info.dis)) {
-                update_intersection_info(&info, &ray, &spheres[i], discriminant);
-                double brightness = -vec3_dot(ray.dir, info.normal);
 
-                uint8_t r = spheres[i].material->color.r * brightness;
-                uint8_t g = spheres[i].material->color.g * brightness;
-                uint8_t b = spheres[i].material->color.b * brightness;
-                color_set(&color, r,g,b);
+    for (int ref_index = 0; ref_index <= max_reflections; ref_index++) {
+        intersection_t info = {false};
+        for (int i = 0; i < spheres_count; i++) {
+            double discriminant = get_discriminant_sphere(&ray, &spheres[i]);
+            if (discriminant < 0) continue;
+            
+            double d = get_intersection_distance_sphere(&ray, spheres[i].pos, discriminant);
+            if (d < 0) continue;
+            if (!info.valid || d < info.dis) {
+                update_intersection_info(&info, &ray, &spheres[i], discriminant);
+                color = vec3_multiply(color, spheres[i].material->color);
             }
         }
-    }
-    if (!info.valid) {
-        color = skybox_get_vec3_color(skybox, ray.dir);
+        if (!info.valid) {
+            color = vec3_multiply(color, skybox_get_pixel(skybox, ray.dir));
+            break;
+        }
+        reflect_ray(&ray, &info);
     }
     return color;
+}
+
+
+void reflect_ray(ray_t *ray, intersection_t *info) {
+    ray->ori = info->pos;
+    ray->dir = get_diffused_reflection(info->normal);
+}
+
+
+vec3_t get_specular_reflection(vec3_t vec, vec3_t norm) {
+    return vec3_subtract(vec, vec3_scale(norm, 2 * vec3_dot(vec, norm)));
+}
+
+
+vec3_t get_diffused_reflection(vec3_t norm) {
+    vec3_t vec = vec3_random();
+    if (vec3_dot(vec, norm) < 0) vec = vec3_negate(vec);
+    return vec;
 }
 
 
@@ -185,6 +235,6 @@ void window_test(SDL_Renderer *rend) {
 
 uint32_t millis() {
   struct timespec t ;
-  clock_gettime ( CLOCK_MONOTONIC_RAW , & t ) ;
+  clock_gettime(CLOCK_MONOTONIC_RAW, &t) ;
   return t.tv_sec * 1000 + ( t.tv_nsec + 500000 ) / 1000000 ;
 }

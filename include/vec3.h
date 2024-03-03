@@ -22,5 +22,6 @@ vec3_t vec3_cross (vec3_t vec1, vec3_t vec2);
 double vec3_dot (vec3_t vec1, vec3_t vec2);
 double vec3_distance (vec3_t vec1, vec3_t vec2);
 vec3_t vec3_rotate (vec3_t vec, double x, double y, double z);
+vec3_t vec3_random();
 
 #endif

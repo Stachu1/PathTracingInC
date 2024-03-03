@@ -2,11 +2,11 @@
 #define material_H
 #include <stdio.h>
 #include <stdlib.h>
-#include "color.h"
+#include "vec3.h"
 
 
 typedef struct {
-    color_t color;
+    vec3_t color;
 } material_t;
 
 

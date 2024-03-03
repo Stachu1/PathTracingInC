@@ -25,21 +25,21 @@ int camera_update_pos(camera_t *camera) {
     double delta_az = M_PI_2*keys[4] - M_PI_2*keys[7];
 
     // AWSD keys indexes: 4 26 22 7
-
+    bool moved = false;
     if (keys[26] | keys[22]) {
         camera->vel = vec3_rotate(vec3_init(0,1,0), camera->angle.x, camera->angle.y, camera->angle.z);
         if (keys[22]) camera->vel = vec3_negate(camera->vel);
         camera->vel = vec3_scale(camera->vel, MOVEMENT_SPEED);
         camera->pos = vec3_add(camera->pos, camera->vel);
-        return true;
+        moved = true;
     }
     if ((keys[4] | keys[7]) & ~(keys[4] & keys[7])) {
         camera->vel = vec3_rotate(vec3_init(0,1,0), 0, 0, camera->angle.z + delta_az);
         camera->vel = vec3_scale(camera->vel, MOVEMENT_SPEED);
         camera->pos = vec3_add(camera->pos, camera->vel);
-        return true;
+        moved = true;
     }
-    return false;
+    return moved ? true : false;
 }
 
 

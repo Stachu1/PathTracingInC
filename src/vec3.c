@@ -71,6 +71,15 @@ vec3_t vec3_normalize(vec3_t vec) {
     return vec;
 }
 
+
+vec3_t vec3_lerp(vec3_t vec1, vec3_t vec2, double lerp) {
+    vec1.x = vec1.x + lerp * (vec2.x - vec1.x);
+    vec1.y = vec1.y + lerp * (vec2.y - vec1.y);
+    vec1.z = vec1.z + lerp * (vec2.z - vec1.z);
+    return vec1;
+}
+
+
 vec3_t vec3_cross(vec3_t vec1, vec3_t vec2) {
     vec3_t vec;
     vec.x = vec1.y * vec2.z - vec1.z * vec2.y;
@@ -107,4 +116,16 @@ vec3_t vec3_rotate(vec3_t vec, double ax, double ay, double az) {
         vec.y = x * sin(az) + y * cos(az);
     }
     return vec;
+}
+
+
+vec3_t vec3_random() {
+    double div = RAND_MAX / 2;
+    vec3_t vec;
+    for (int i = 0; i < 100; i++) {
+        vec3_set(&vec, rand() / div - 1, rand() / div - 1, rand() / div - 1);
+        double sqr_dis = vec3_dot(vec, vec);
+        if (sqr_dis <= 1) break;;
+    }
+    return vec3_normalize(vec);
 }
