@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include "vec3.h"
-#include "color.h"
 #include "skybox.h"
 
 
