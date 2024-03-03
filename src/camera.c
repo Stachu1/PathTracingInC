@@ -43,7 +43,7 @@ int camera_update_pos(camera_t *camera) {
 }
 
 
-int camera_ipdate_angle(camera_t *camera, SDL_Event *event) {
+int camera_update_angle(camera_t *camera, SDL_Event *event) {
     static int start_x;
     static int start_y;
     static int d_x;
@@ -68,10 +68,12 @@ int camera_ipdate_angle(camera_t *camera, SDL_Event *event) {
         if (mouse_down) {
             d_x = start_x - event->motion.x;
             d_y = start_y - event->motion.y;
-            camera->angle.x -= d_y * camera->pixel_angle_y;
-            camera->angle.z -= d_x * camera->pixel_angle_x;
             start_x = event->motion.x;
             start_y = event->motion.y;
+            camera->angle.x -= d_y * camera->pixel_angle_y;
+            camera->angle.z -= d_x * camera->pixel_angle_x;
+            if (camera->angle.x < -M_PI_2) camera->angle.x = -M_PI_2;
+            if (camera->angle.x > M_PI_2) camera->angle.x = M_PI_2;
             return 1;  
         }
     }

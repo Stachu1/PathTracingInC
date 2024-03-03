@@ -13,9 +13,8 @@
 #define WINDOW_WIDTH 600
 #define WINDOW_HEIGHT 600
 
-#define RES_DIVISOR_IN_PERFOMANCE 4
-#define MAX_REFLECTIONS 1
-
+#define RES_DIVISOR_IN_PERFOMANCE 3
+#define MAX_REFLECTIONS 5
 
 
 void init(SDL_Window **, SDL_Renderer **, camera_t *, double, skybox_t *);
@@ -29,6 +28,7 @@ vec3_t get_specular_reflection(vec3_t, vec3_t);
 void update_intersection_info(intersection_t *, ray_t *, sphere_t *, double);
 void render_screen(SDL_Renderer *, camera_t *, vec3_t [], bool, skybox_t *, sphere_t[], int);
 uint32_t millis();
+
 
 int main(void) {
     SDL_Event event;
@@ -46,7 +46,6 @@ int main(void) {
     // Create scene
     int spheres_count = 3;
     sphere_t spheres[spheres_count];
-
     vec3_set(&spheres[0].pos, -3, 5, 0);
     vec3_set(&spheres[1].pos, 0, 5, 0);
     vec3_set(&spheres[2].pos, 3, 5, 0);
@@ -61,8 +60,6 @@ int main(void) {
     spheres[2].material = &material_b;
 
 
-
-
     // Main loop
     printf("\n");
     uint32_t last_frame = millis();
@@ -70,7 +67,7 @@ int main(void) {
     while (1) {
         if (SDL_PollEvent(&event) && event.type == SDL_QUIT) break;
         
-        bool cam_moved = camera_update_pos(&camera) | camera_ipdate_angle(&camera, &event);
+        bool cam_moved = camera_update_pos(&camera) | camera_update_angle(&camera, &event);
         if (cam_moved) last_moved = last_frame;
         if (millis() - last_moved < 500) {
             // Performance mode
@@ -81,8 +78,6 @@ int main(void) {
             render_screen(renderer, &camera, pixels, false, &skybox,  spheres, spheres_count);
         }
         SDL_RenderPresent(renderer);
-
-
         uint32_t now_ms = millis();
         printf("\rLastFrame: %dms ", now_ms - last_frame);
         fflush(stdout);
@@ -100,21 +95,18 @@ void render_screen(SDL_Renderer *renderer, camera_t *camera, vec3_t pixels[], bo
     int max_reflections = perfomance_mode ? 0 : MAX_REFLECTIONS;
     for (int y = 0; y < camera->res_y; y+=res_divisor) {
         for (int x = 0; x < camera->res_x; x+=res_divisor) {
-
-            vec3_t color = render_pixel(x, y, camera, skybox, spheres, spheres_count, max_reflections);
+            vec3_t color = render_pixel(x, y, camera, skybox, spheres, spheres_count, max_reflections);    
             
-            
-            if (perfomance_mode) {
-                for (int dy = 0; dy < res_divisor; dy++) {
-                    for (int dx = 0; dx < res_divisor; dx++) {
-                        // SDL_RenderDrawPoint(renderer, x+sx, y+sy);
-                        pixels[(x+dx) + (y+dy) * WINDOW_WIDTH] = color;
-                    }
-                }
-            }
-            else {
-                // SDL_RenderDrawPoint(renderer, x, y);
+            if (!perfomance_mode) {
                 pixels[x + y * WINDOW_WIDTH] = color;
+                continue;
+            }
+
+            // Performance mode reneder
+            for (int dy = 0; dy < res_divisor; dy++) {
+                for (int dx = 0; dx < res_divisor; dx++) {
+                    pixels[(x+dx) + (y+dy) * WINDOW_WIDTH] = color;
+                }
             }
         }
     }
@@ -144,6 +136,9 @@ vec3_t render_pixel(int x, int y, camera_t *camera, skybox_t *skybox, sphere_t s
             if (!info.valid || d < info.dis) {
                 update_intersection_info(&info, &ray, &spheres[i], discriminant);
                 color = vec3_multiply(color, spheres[i].material->color);
+                
+                // Cos weighted brightness when in performance mode
+                if (!max_reflections) color = vec3_scale(color, -vec3_dot(ray.dir, info.normal));
             }
         }
         if (!info.valid) {

@@ -13,11 +13,9 @@ vec3_t vec3_init(double x, double y, double z) {
 }
 
 void vec3_set(vec3_t *vec, double x, double y, double z) {
-    if (vec != NULL) {
-        vec->x = x;
-        vec->y = y;
-        vec->z = z;
-    }
+    vec->x = x;
+    vec->y = y;
+    vec->z = z;
 }
 
 int vec3_is_zero(vec3_t vec) {
