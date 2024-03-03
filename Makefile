@@ -11,7 +11,7 @@ build/%.o: src/%.c | mkdir
 mkdir:
 	mkdir -p build
 
-build: clean build main
+build: clean main
 
 run: clean build main
 	./main

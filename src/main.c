@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include <time.h>
 #include "SDL2/SDL.h"
 #include "vec3.h"
 #include "ray.h"
@@ -13,7 +14,7 @@
 #define WINDOW_WIDTH 600
 #define WINDOW_HEIGHT 600
 
-#define RES_DIVISOR_IN_PERFOMANCE 3
+#define RES_DIVISOR_IN_PERFOMANCE 4
 #define MAX_REFLECTIONS 5
 
 
@@ -40,7 +41,7 @@ int main(void) {
     
     // Initialize
     init(&window, &renderer, &camera, 75, &skybox);
-    vec3_t pixels[WINDOW_WIDTH * WINDOW_HEIGHT];
+    vec3_t* pixels = malloc(WINDOW_WIDTH * WINDOW_HEIGHT * sizeof(vec3_t));
     
 
     // Create scene
@@ -91,28 +92,33 @@ int main(void) {
 
 
 void render_screen(SDL_Renderer *renderer, camera_t *camera, vec3_t pixels[], bool perfomance_mode, skybox_t *skybox, sphere_t spheres[], int spheres_count) {
+    static int iterations = 0;
+    perfomance_mode ? iterations = 0 : iterations++;
+    double lerp = (iterations-1) ? 1 - 1./(iterations-1) : 0.;
+
     int res_divisor = perfomance_mode ? RES_DIVISOR_IN_PERFOMANCE : 1;
     int max_reflections = perfomance_mode ? 0 : MAX_REFLECTIONS;
+    
     for (int y = 0; y < camera->res_y; y+=res_divisor) {
         for (int x = 0; x < camera->res_x; x+=res_divisor) {
             vec3_t color = render_pixel(x, y, camera, skybox, spheres, spheres_count, max_reflections);    
             
             if (!perfomance_mode) {
-                pixels[x + y * WINDOW_WIDTH] = color;
+                pixels[x + y * camera->res_x] = vec3_lerp(color, pixels[x + y * camera->res_x], lerp);
                 continue;
             }
 
             // Performance mode reneder
             for (int dy = 0; dy < res_divisor; dy++) {
                 for (int dx = 0; dx < res_divisor; dx++) {
-                    pixels[(x+dx) + (y+dy) * WINDOW_WIDTH] = color;
+                    pixels[(x+dx) + (y+dy) * camera->res_x] = color;
                 }
             }
         }
     }
     for (int y = 0; y < camera->res_y; y++) {
         for (int x = 0; x < camera->res_x; x++) {
-            vec3_t color = pixels[x + y * WINDOW_WIDTH];
+            vec3_t color = pixels[x + y * camera->res_x];
             SDL_SetRenderDrawColor(renderer, (uint8_t)255.*color.x, (uint8_t)255.*color.y, (uint8_t)255.*color.z, 255);
             SDL_RenderDrawPoint(renderer, x, y);
         }

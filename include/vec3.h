@@ -18,6 +18,7 @@ vec3_t vec3_scale (vec3_t vec, double val);
 vec3_t vec3_negate (vec3_t vec);
 double vec3_length (vec3_t vec);
 vec3_t vec3_normalize(vec3_t vec);
+vec3_t vec3_lerp(vec3_t vec1, vec3_t vec2, double lerp);
 vec3_t vec3_cross (vec3_t vec1, vec3_t vec2);
 double vec3_dot (vec3_t vec1, vec3_t vec2);
 double vec3_distance (vec3_t vec1, vec3_t vec2);
