@@ -7,6 +7,7 @@
 
 typedef struct {
     vec3_t color;
+    double smoothness;
 } material_t;
 
 

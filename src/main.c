@@ -47,15 +47,15 @@ int main(void) {
     // Create scene
     int spheres_count = 3;
     sphere_t spheres[spheres_count];
-    vec3_set(&spheres[0].pos, -3, 5, 0);
+    vec3_set(&spheres[0].pos, -2.5, 5, 0);
     vec3_set(&spheres[1].pos, 0, 5, 0);
-    vec3_set(&spheres[2].pos, 3, 5, 0);
+    vec3_set(&spheres[2].pos, 2.5, 5, 0);
     spheres[0].radius = 1;
     spheres[1].radius = 1;
     spheres[2].radius = 1;
-    material_t material_r = {vec3_init(1,0,0)};
-    material_t material_g = {vec3_init(0,1,0)};
-    material_t material_b = {vec3_init(0,0,1)};
+    material_t material_r = {vec3_init(1,0.8,0.8), 0.8};
+    material_t material_g = {vec3_init(1,1,1), 0.7};
+    material_t material_b = {vec3_init(0.8,0.8,1), 0.6};
     spheres[0].material = &material_r;
     spheres[1].material = &material_g;
     spheres[2].material = &material_b;
@@ -80,7 +80,7 @@ int main(void) {
         }
         SDL_RenderPresent(renderer);
         uint32_t now_ms = millis();
-        printf("\rLastFrame: %dms ", now_ms - last_frame);
+        printf("\rFrame: %dms ", now_ms - last_frame);
         fflush(stdout);
         last_frame = now_ms;
     }
@@ -141,17 +141,20 @@ vec3_t render_pixel(int x, int y, camera_t *camera, skybox_t *skybox, sphere_t s
             if (d < 0) continue;
             if (!info.valid || d < info.dis) {
                 update_intersection_info(&info, &ray, &spheres[i], discriminant);
-                color = vec3_multiply(color, spheres[i].material->color);
-                
-                // Cos weighted brightness when in performance mode
-                if (!max_reflections) color = vec3_scale(color, -vec3_dot(ray.dir, info.normal));
             }
         }
-        if (!info.valid) {
+        if (info.valid) {
+            color = vec3_multiply(color, info.material->color);
+                
+            // Cos weighted brightness when in performance mode
+            if (!max_reflections) color = vec3_scale(color, -vec3_dot(ray.dir, info.normal));
+            reflect_ray(&ray, &info);
+            
+        }
+        else {
             color = vec3_multiply(color, skybox_get_pixel(skybox, ray.dir));
             break;
         }
-        reflect_ray(&ray, &info);
     }
     return color;
 }
@@ -159,7 +162,9 @@ vec3_t render_pixel(int x, int y, camera_t *camera, skybox_t *skybox, sphere_t s
 
 void reflect_ray(ray_t *ray, intersection_t *info) {
     ray->ori = info->pos;
-    ray->dir = get_diffused_reflection(info->normal);
+    vec3_t diff_dir = get_diffused_reflection(info->normal);
+    vec3_t spec_dir = get_specular_reflection(ray->dir, info->normal);
+    ray->dir = vec3_lerp(diff_dir, spec_dir, info->material->smoothness);
 }
 
 
@@ -170,6 +175,7 @@ vec3_t get_specular_reflection(vec3_t vec, vec3_t norm) {
 
 vec3_t get_diffused_reflection(vec3_t norm) {
     vec3_t vec = vec3_random();
+    vec = vec3_normalize(vec3_add(vec, norm));
     if (vec3_dot(vec, norm) < 0) vec = vec3_negate(vec);
     return vec;
 }
